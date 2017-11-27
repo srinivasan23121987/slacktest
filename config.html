@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title></title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="./css/bootstrap.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
+</head>
+
+<body>
+    <nav style="border-radius:0px;" class="navbar navbar-inverse">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a href="/" class="navbar-brand">Slack Bot</a>
+            </div>
+
+            <ul class="nav navbar-nav">
+                <li class="active"><a href="#">config</a></li>
+            </ul>
+
+        </div>
+    </nav>
+    <div class="container">
+        <div class="panel panel-default">
+            <div class="panel-heading">Slack config</div>
+            <div class="panel-body">
+                <label>Bot Token</label>
+                <input type="text" required="" name="botToken" class="form-control botToken"><br/>
+                <label>Bot User</label>
+                <input type="text" required="" name="botUser" class="form-control botUser"><br/>
+                <button class="btn btn-danger btn-sm botconfig">Submit</button>
+            </div>
+            <script src="./jquery-3.2.1.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.2.0/js/bootstrap.min.js"></script>
+            <script>
+                $(function () {
+                    $.ajax({
+                        url: "/configdata",
+                        type: "POST",
+                        success: function (result) {
+                            if (result === "No File!!!") {
+                                alert(result);
+                            }
+                            else {
+                                let data = JSON.parse(result);
+                                console.log(data);
+                                $(".botToken").val(data.bottoken);
+                                $(".botUser").val(data.botuser);
+                            }
+                        }
+                    });
+                    $(".botconfig").click(function (event) {
+                        let bottoken = $(".botToken").val();
+                        let botuser = $(".botUser").val();
+                        if (bottoken && botuser) {
+                            $.ajax({
+                                url: "/updateconfig",
+                                type: "POST",
+                                async: false,
+                                data: {
+                                    'bottoken': bottoken,
+                                    'botuser': botuser
+                                },
+                                success: function (result) {
+                                    alert(result);
+                                    $this.button('reset');
+                                }
+                            });
+                            event.preventDefault();
+                        }
+                        else {
+                            alert('Bot Configs cannot be empty');
+                        }
+                    })
+                })
+            </script>
+</body>
+
+</html>

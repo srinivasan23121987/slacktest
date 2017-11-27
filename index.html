@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title></title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="./css/bootstrap.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
+</head>
+
+<body>
+  <nav style="border-radius:0px;" class="navbar navbar-inverse">
+    <div class="container-fluid">
+      <div class="navbar-header">
+        <a href="/" class="navbar-brand">Slack Bot</a>
+      </div>
+
+      <ul class="nav navbar-nav">
+        <li class="active"><a href="/config">config</a></li>
+      </ul>
+
+    </div>
+  </nav>
+  <div class="container">
+    <div style="display:none;" class="alert alert-danger">
+      <strong>Warning!</strong> Server not connected.</div>
+    <div style="display:none" class="alert alert-success">
+      <strong>Warning!</strong> Server Connected.</div>
+    <div class="panel panel-default">
+      <div class="panel-heading">Slack Testing</div>
+      <div class="panel-body">
+        <label>Enter utterance</label>
+        <input type="text" required="" name="sendmessage" class="form-control sendmessage">
+        <label>Expected Output</label>
+        <input id="expected" type="text" name="expected" class="form-control expected">
+        <br>
+        <button type="button" data-loading-text="&lt;i class='fa fa-circle-o-notch fa-spin'&gt;&lt;/i&gt; Processing" class="btn btn-danger utterances-submit">Send</button>
+        <a href="https://slack.com/oauth/authorize?client_id=277105717922.277386495794&amp;redir=http://localhost:7000&amp;scope=bot,chat:write:user,incoming-webhook">
+          <img alt="Add to Slack" height="40" width="139" src="https://platform.slack-edge.com/img/add_to_slack.png" srcset="https://platform.slack-edge.com/img/add_to_slack.png 1x, https://platform.slack-edge.com/img/add_to_slack@2x.png 2x">
+        </a>
+      </div>
+    </div>
+  </div>
+  <div class="container">
+    <form id="uploadForm" enctype="multipart/form-data" action="/api/photo" method="post">
+
+      <input type="file" name="userPhoto" class="col-md-2" required>
+      <input type="submit" style="padding:5px 10px" value="Upload" name="submit" class="btn btn-primary btn-sm col-md-1">
+    </form>
+    &nbsp;
+    <button class="btn btn-danger btn-sm deletefile">Delete File</button> &nbsp;
+    <button class="btn btn-danger btn-sm checkfile" data-loading-text="&lt;i class='fa fa-circle-o-notch fa-spin'&gt;&lt;/i&gt; Processing">Check</button>
+  </div>
+  <br>
+  <div class="container">
+    <table style="border: 1px solid black" class="table table-bordered">
+      <tr>
+        <th id="action">Action</th>
+        <th id="expected">Expected Output</th>
+        <th id="actual">Actual Output</th>
+        <th id="actual">Response Time</th>
+        <th id="actual">Status</th>
+      </tr>
+      <tbody id="append-body"></tbody>
+    </table>
+  </div>
+  <script src="./jquery-3.2.1.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.2.0/js/bootstrap.min.js"></script>
+  <script>
+    $(function () {
+      $.ajax({
+        url: "/uploaddata",
+        type: "POST",
+        success: function (result) {
+          if (result !== "No File!!!") {
+            let jsondata = JSON.parse(JSON.parse(result));
+            let html;
+            for (var i of jsondata) {
+              html += `<tr><td>${i["Actions"]}</td><td>${i["Expected Output"]}</td><td></td><td></td><td></td></tr>`;
+            }
+            $("#append-body").html(html);
+          } else {
+            $("#append-body").html(`<tr  class="NoRecords"><td colspan="5" align="center">No Records!!!</td></tr>`);
+          }
+        }, error: function () {
+
+        }
+      });
+      $(".checkfile").click(function (event) {
+        event.preventDefault();
+        var $this = $(this);
+        $this.button('loading');
+        if ($("#append-body tr").length > 0) {
+          $("#append-body tr").each(function () {
+            let tablebody = $(this);
+            var start_time = new Date().getTime();
+            let utterance = tablebody.find("td:eq(0)").html();
+            console.log(utterance);
+            $.ajax({
+              url: "/api",
+              type: "POST",
+              async: false,
+              data: {
+                'utterance': utterance
+              },
+              success: function (result) {
+                let result1 = JSON.parse(result);
+                var request_time = new Date().getTime() - start_time;
+                tablebody.find("td:eq(2)").html(result1.text);
+                tablebody.find("td:eq(3)").html(`${request_time}ms`);
+                $this.button('reset');
+              }
+            });
+          })
+        }
+        else {
+          alert("Empty Records!!!");
+        }
+      })
+      $(".deletefile").click(function (event) {
+        event.preventDefault();
+        $.ajax({
+          url: "/deletefile",
+          type: "POST",
+          success: function (result) {
+            alert(result);
+          }
+        });
+      });
+      $(".utterances-submit").click(function (event) {
+        let utterance = $(".sendmessage").val();
+        if (utterance) {
+          var start_time = new Date().getTime();
+          var $this = $(this);
+          $this.button('loading');
+          $.ajax({
+            url: "/api",
+            type: "POST",
+            data: {
+              'utterance': utterance
+            },
+            success: function (result) {
+              if ($("tbody tr:eq(1) td").text() == 'No Records!!!') {
+                $("tbody tr:eq(1).NoRecords").remove();
+              }
+              let result1 = JSON.parse(result);
+              var request_time = new Date().getTime() - start_time;
+              $("#append-body").append(`<tr><td>${utterance}</td><td>${$(".expected").val()}</td><td>${result1.text}</td><td>${request_time}ms</td><td></td></tr>`);
+              $this.button('reset');
+            }
+          });
+          event.preventDefault();
+        }
+        else {
+          alert('Please Enter the utterance');
+        }
+      });
+    })
+  </script>
+</body>
+
+</html>
